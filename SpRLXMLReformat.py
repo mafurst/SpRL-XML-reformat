@@ -14,48 +14,16 @@ class File:
         s+=self.fileName+"\n"
         s+=self.text+"\n"
         return s
-def findMatch(text):
-    for i in range(0,774):
-        name = "TRIPS_parses/train-sentences.txt-"+str(i+100)+".xml"
-        try:
-            _tree = ET.parse(name)
-        except (FileNotFoundError,ET.ParseError):
-            continue
-        for scene in _tree.getroot():
-            for element in scene:
-                if element.tag=='SENTENCE':
-                    if element.find('TEXT').text==text:
-                        return name
-    return ""
 
 def cleanString(string):
     string = re.sub('[^a-zA-Z]',"",string)
-    string = string.replace('A','a')
-    string = string.replace('B','b')
-    string = string.replace('C','c')
-    string = string.replace('D','d')
-    string = string.replace('E','e')
-    string = string.replace('F','f')
-    string = string.replace('G','g')
-    string = string.replace('H','h')
-    string = string.replace('I','i')
-    string = string.replace('J','j')
-    string = string.replace('K','k')
-    string = string.replace('L','l')
-    string = string.replace('M','m')
-    string = string.replace('N','n')
-    string = string.replace('O','o')
-    string = string.replace('P','p')
-    string = string.replace('Q','q')
-    string = string.replace('R','r')
-    string = string.replace('S','s')
-    string = string.replace('T','t')
-    string = string.replace('U','u')
-    string = string.replace('V','v')
-    string = string.replace('W','w')
-    string = string.replace('X','x')
-    string = string.replace('Y','y')
-    string = string.replace('Z','z')
+    charPairs = [('A','a'),('B','b'),('C','c'),('D','d'),('E','e'),('F','f'),
+                 ('G','g'),('H','h'),('I','i'),('J','j'),('K','k'),('L','l'),
+                 ('M','m'),('N','n'),('O','o'),('P','p'),('Q','q'),('R','r'),
+                 ('S','s'),('T','t'),('U','u'),('V','v'),('W','w'),('X','x'),
+                 ('Y','y'),('Z','z')]
+    for pair in charPairs:
+        string=string.replace(pair[0],pair[1])
     return string
 
 def findMatch(text,files):
@@ -72,27 +40,28 @@ def indexFiles():
         name = "TRIPS_parses/train-sentences.txt-"+str(i+100)+".xml"
         try:
             _tree = ET.parse(name)
-            if (_tree.getroot().tag=='SPRL'):
-                for scene in _tree.getroot():
-                    for element in scene:
-                        if element.tag=='SENTENCE':
-                            text = element.find('TEXT').text
-                            file = File()
-                            file.fileName=name
-                            file.text=text
-                            files+=[file]
-            elif (_tree.getroot().tag=='SENTENCE'):
-                text = _tree.getroot().find('TEXT').text
-                file = File()
-                file.fileName=name
-                file.text=text
-                files+=[file]
         except (FileNotFoundError,ET.ParseError):
-            s="DO NOTHING"
+            continue
+        if (_tree.getroot().tag=='SPRL'):
+            for scene in _tree.getroot():
+                for element in scene:
+                    if element.tag=='SENTENCE':
+                        text = element.find('TEXT').text
+                        file = File()
+                        file.fileName=name
+                        file.text=text
+                        files+=[file]
+        elif (_tree.getroot().tag=='SENTENCE'):
+            text = _tree.getroot().find('TEXT').text
+            file = File()
+            file.fileName=name
+            file.text=text
+            files+=[file]
     return files
 
 def _pullElements(root):
     elements=[]
+    #Have to navigate to/find Sentence
     for scene in root:
         for element in scene:
             if element.tag=='SENTENCE':
@@ -104,9 +73,11 @@ def pullElements(fileName):
     tree=ET.parse(fileName)
     root=tree.getroot()
     if root.tag=='SPRL':
+        #If is using older format call specialized function
         return _pullElements(root)
     elements=[]
     for elem in root:
+        #Pull all non-'TEXT' elements
         if elem.tag!='TEXT':
             elements+=[elem]
     return elements
@@ -114,14 +85,20 @@ def pullElements(fileName):
 
 def main():
     files = indexFiles()
-    tree = ET.parse('sprl2017_train.xml')
+    try:
+        tree = ET.parse('sprl2017_train.xml')
+    except (FileNotFoundError,ET.ParseError):
+        print("Could not load \'sprl2017_train.xml\'")
+        return
     log=""
     root = tree.getroot()
     for scene in list(root):
         for element in list(scene):
             if element.tag=='SENTENCE':
                 text = element.find('TEXT').text
+                #find matching text file
                 match=findMatch(text,files)
+                #if there is no match remove scentence and add to log
                 if match=="":
                     log+="No match found for:\n"
                     log+=text+"\n"
@@ -129,16 +106,22 @@ def main():
                     root.remove(scene)
                     break
                 else:
+                    #Remove non-'TEXT' elements
                     for sub in list(element):
                         if sub.tag!='TEXT':
                             element.remove(sub)
+                    #Update with new non-'TEXT' elements
                     for elem in list(pullElements(match)):
                         element.append(elem)
-                    #ET.dump(element)
+    #write tree to output file
     tree.write("output.xml")
-    logFile = open("log.txt",'a')
-    logFile.write(log)
-    logFile.close()
+    print("output.xml successfully created")
+    #write log
+    if log!="":
+        logFile = open("log.txt",'a')
+        logFile.write(log)
+        logFile.close()
+        print("An error log (\'log.txt\') has been generated.")
     return
 
 
