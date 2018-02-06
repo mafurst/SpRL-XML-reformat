@@ -82,11 +82,10 @@ def pullElements(fileName):
             elements+=[elem]
     return elements
         
-
-def main():
+def run(xmlName):
     files = indexFiles()
     try:
-        tree = ET.parse('sprl2017_train.xml')
+        tree = ET.parse(xmlName+'.xml')
     except (FileNotFoundError,ET.ParseError):
         print("Could not load \'sprl2017_train.xml\'")
         return
@@ -114,15 +113,19 @@ def main():
                     for elem in list(pullElements(match)):
                         element.append(elem)
     #write tree to output file
-    tree.write("output.xml")
-    print("output.xml successfully created")
+    tree.write(xmlName+"-output.xml")
+    print(xmlName+"-output.xml successfully created")
     #write log
     if log!="":
-        logFile = open("log.txt",'a')
+        logFile = open(xmlName+"-log.txt",'a')
         logFile.write(log)
         logFile.close()
-        print("An error log (\'log.txt\') has been generated.")
+        print("An error log (\'"+xmlName+"-log.txt\') has been generated.")
     return
+
+
+def main():
+    run("sprl2017_train")
 
 
 main()
